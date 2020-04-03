@@ -1,2 +1,0 @@
-# LMIs
-MatLab
