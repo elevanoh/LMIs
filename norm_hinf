@@ -1,0 +1,64 @@
+% linear system 
+% dx = A.x  + B1.w 
+%  z = C1.x + D11.w
+% LMIs-Norm Hinf
+
+function out = norm_hinf(A,B1,C1,D11,bordas,aleatorios)
+
+order        = size(A{1},1);
+vertices     = size(A,2);
+input        = size(B1{1},1);
+output       = size(C1{1},2);
+
+max_real_eig = -1e10;
+eigsBorda    = [];
+eigsRand     = [];
+
+for i=1:vertices
+    for j=i+1:vertices
+        for a=0:1/bordas:1
+            
+            alphas=zeros(1,vertices); % vetor
+            alphas(1,i) = a;
+            alphas(1,j) = 1-a;
+            
+            Ai = alphas(1,i)*A{i} + alphas(1,j)*A{j};
+            Bi = alphas(1,i)*B1{i} + alphas(1,j)*B1{j};
+            Ci = alphas(1,i)*C1{i} + alphas(1,j)*C1{j};
+            Di = alphas(1,i)*D11{i} + alphas(1,j)*D11{j};
+            sys_i = ss(Ai,Bi,Ci,Di);
+            
+            m=norm(sys_i,inf);%max(sigma(sys_i));
+            eigsBorda = [eigsBorda;eig(Ai)];
+            if m > max_real_eig
+               max_real_eig = m;
+               alpha_star   = alphas;
+            end
+        end
+    end
+end
+
+% no interior do politopo
+for i=1:aleatorios
+    alphas = rand(1,vertices);
+    alphas = alphas./sum(alphas);
+    Ai=zeros(order);
+    Bi=zeros(input,1);
+    Ci=zeros(1,output);
+    Di=zeros(1);
+    for j=1:vertices
+        Ai  = Ai + A{j}*alphas(1,j);
+        Bi  = Bi + B1{j}*alphas(1,j);
+        Ci  = Ci + C1{j}*alphas(1,j);
+        Di  = Di + D11{j}*alphas(1,j);
+    end
+    sys_i = ss(Ai,Bi,Ci,Di);
+    m=norm(sys_i,inf);
+    eigsRand = [eigsRand;eig(Ai)];
+    if m > max_real_eig
+        max_real_eig = m;
+        alpha_star   = alphas;
+    end
+end
+out.norma_inf  = max_real_eig;
+out.alpha_star = alpha_star;
